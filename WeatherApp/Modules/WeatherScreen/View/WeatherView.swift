@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ContentView: View {
+struct WeatherView: View {
     @ObservedObject var viewModel : WeatherViewModel
     var body: some View {
         ZStack{
@@ -16,7 +16,6 @@ struct ContentView: View {
                 .edgesIgnoringSafeArea(.all)
             
             VStack {
-                // Current weather, forecast list, and weather details views
                 currentWeatherView
                 Spacer()
                 forecastListView
@@ -36,22 +35,37 @@ struct ContentView: View {
             Text(viewModel.weatherResponse?.location.name ?? "Loading...")
                 .font(.largeTitle)
                 .fontWeight(.medium)
+
             Text("\(viewModel.weatherResponse?.current.tempC ?? 0, specifier: "%.1f")°")
                 .font(.title)
                 .fontWeight(.medium)
+            
             Text(viewModel.weatherResponse?.current.condition.text ?? "")
                 .font(.title)
                 .fontWeight(.medium)
+            
             HStack {
                 Text("H: \(viewModel.weatherResponse?.forecast.forecastday.first?.day.maxtempC ?? 0, specifier: "%.1f")°")
                 Text("L: \(viewModel.weatherResponse?.forecast.forecastday.first?.day.mintempC ?? 0, specifier: "%.1f")°")
-            }
+            }.font(.title3)
             if let url = URL(string: "https:" + (viewModel.weatherResponse?.current.condition.icon ?? "")) {
                 AsyncImage(url: url)
-                    .frame(width: 20,height: 20)
+                { phase in
+                   if let image = phase.image {
+                       image
+                           .resizable()
+                           .scaledToFit()
+                           .frame(width: 130, height: 130)
+                           .offset(y: -40)
+                   } else if phase.error != nil {
+                       Text("Failed to load image")
+                   } else {
+                       ProgressView()
+                   }
+               }
             }
         }
-        .padding(.bottom,80)
+        .padding(.top,25)
     }
     
     private var forecastListView: some View {
@@ -59,48 +73,40 @@ struct ContentView: View {
             Text("3-DAY FORECAST")
                 .font(.title3)
                 .bold()
-                .padding(.top, 20)
-            
-            // Use a default empty array if forecastday is nil
-            List(viewModel.weatherResponse?.forecast.forecastday ?? [], id: \.date) { day in
-                NavigationLink(destination: HourlyWeatherView(hourlyData: day.hour)) {
+        
+            List(viewModel.weatherResponse?.forecast.forecastday ?? []) { day in
+                NavigationLink(destination: HourlyWeatherView(viewModel: HourlyWeatherViewModel(hourlyForecast: day.hour, isDaytime: viewModel.isDaytime))) {
                     HStack {
-                        Text(getDayName(from: day.date))
+                        Text(viewModel.getDayName(from: day.date))
                             .frame(maxWidth: 50)
+                            .font(.body)
+                            .bold()
                         Spacer()
                         if let url = URL(string: "https:" + (day.day.condition.icon)) {
-                            AsyncImage(url: url)
-                                .frame(width: 20, height: 20)
+                            AsyncImage(url: url){
+                                phase in
+                                if let image = phase.image{
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 60, height: 10)
+                                }
+                            }
                         }
                         Spacer()
-                        Text("\(day.day.mintempC, specifier: "%.1f") -")
-                        Text("\(day.day.maxtempC, specifier: "%.1f")")
+                        Text("\(day.day.mintempC, specifier: "%.1f")° - \(day.day.maxtempC, specifier: "%.1f")°")
+                            .font(.body)
+                            .bold()
                     }
-                    .background(Color.clear)
                     .padding(.vertical, 5)
                 }
                 .listRowBackground(Color.clear)
             }
             .listStyle(PlainListStyle())
-            .scrollContentBackground(.hidden)
             //.scrollDisabled(true)
         }
+        .offset(y: -40)
         .padding(.horizontal)
-    }
-
-    private func getDayName(from dateString: String) -> String {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        if let date = dateFormatter.date(from: dateString) {
-            let calendar = Calendar.current
-            if calendar.isDateInToday(date) {
-                return "Today"
-            } else {
-                dateFormatter.dateFormat = "EEE"
-                return dateFormatter.string(from: date)
-            }
-        }
-        return dateString
     }
 
     
@@ -108,44 +114,48 @@ struct ContentView: View {
         VStack {
             HStack {
                 VStack{
-                    Text("Visibility")
-                        .font(.body)
+                    Text("Visibility".uppercased())
+                        .font(.subheadline)
                     Text("\(viewModel.weatherResponse?.current.visKM ?? 0 ,specifier: "%1.f") km")
                         .font(.largeTitle)
+                        .padding(.top,5)
                 }
                 Spacer()
                 VStack{
-                    Text("Humidity")
-                        .font(.body)
+                    Text("Humidity".uppercased())
+                        .font(.subheadline)
                     Text("\(viewModel.weatherResponse?.current.humidity ?? 0)%")
                         .font(.largeTitle)
+                        .padding(.top,5)
                 }
             }
             .padding()
             HStack {
                 VStack{
-                    Text("Visibility")
-                        .font(.body)
+                    Text("Visibility".uppercased())
+                        .font(.subheadline)
                     Text("\(viewModel.weatherResponse?.current.feelslikeC ?? 0 ,specifier: "%1.f")°")
                         .font(.largeTitle)
+                        .padding(.top,5)
                 }
                 Spacer()
                 VStack{
-                    Text("Pressure")
-                        .font(.body)
+                    Text("Pressure".uppercased())
+                        .font(.subheadline)
                     Text("\(viewModel.weatherResponse?.current.pressureMB ?? 0 ,specifier: "%1.f")")
                         .font(.largeTitle)
+                        .padding(.top,5)
                 }
             }
             .padding()
         }
-        .padding(EdgeInsets(top: 0, leading: 50, bottom: 0, trailing: 50))
+        .padding(.horizontal,50)
         .frame(maxWidth: .infinity)
     }
 }
 
 #Preview {
     NavigationView{
-        ContentView(viewModel: WeatherViewModel())
+        WeatherView(viewModel: WeatherViewModel())
     }
 }
