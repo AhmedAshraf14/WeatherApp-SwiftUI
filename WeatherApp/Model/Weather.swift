@@ -51,8 +51,7 @@ struct Forecast: Codable {
 }
 
 // MARK: - Forecastday
-struct Forecastday: Codable, Identifiable {
-    let id = UUID()
+struct Forecastday: Codable {
     let date: String
     let day: Day
     let hour: [Hour]  // Add this line to include hourly data
